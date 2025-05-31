@@ -1,4 +1,4 @@
-import { Component, resource, signal } from '@angular/core';
+import { Component, effect, resource, signal } from '@angular/core';
 import { API_URL } from './config';
 import { User } from './model';
 import {MatProgressBarModule} from '@angular/material/progress-bar';
@@ -16,34 +16,40 @@ import {MatProgressBarModule} from '@angular/material/progress-bar';
     }
     @if (users.error()) {
       <div class="error">{{users.error()}}</div>
+    } @else {
+      <section class="actions">
+        <button (click)="users.reload()">Reload</button>
+        <button (click)="addUser()">Add User</button>
+        <button (click)="users.set([])">Clear</button>
+      </section>
+      <ul>
+        @for (user of users.value(); track user.id) {
+          <li>{{ user.name }}</li>
+        } @empty {
+          <li class="no-data">Nothing to show</li>
+        }
+      </ul>
     }
-    <section class="actions">
-      <button (click)="users.reload()">Reload</button>
-      <button (click)="addUser()">Add User</button>
-      <button (click)="users.set([])">Clear</button>
-    </section>
-    <ul>
-      @for (user of users.value(); track user.id) {
-        <li>{{ user.name }}</li>
-      } @empty {
-        <li class="no-data">Nothing to show</li>
-      }
-    </ul>
+
   `
 })
 export class UserSearchComponent {
   query = signal('');
-  users = resource<User[], { query: string }>({
-    params: () => ({ query: this.query() }),
+  users = resource<User[], { q: string }>({
+    params: () => ({ q: this.query() }),
     loader: async ({params, abortSignal}) => {
-      const users = await fetch(`${API_URL}?name_like=^${params.query}`, {
+      const res = await fetch(`${API_URL}?name_like=^${params.q}`, {
         signal: abortSignal
       });
-      if (!users.ok) throw Error(`Could not fetch...`)
-      return await users.json();
+      if (!res.ok) throw new Error(`Http Status [${res.status}] ${res.statusText} - ${res.url}`);
+      return await res.json();
     }
   });
-  constructor() {}
+  constructor() {
+    effect(() => {
+      console.log('Users load: ', this.users.error() || 'ok');
+    })
+  }
   addUser() {
     const user = { id: 123, name: "Dmytro Mezhenskyi" };
     this.users.update(
