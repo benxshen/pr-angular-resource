@@ -34,9 +34,9 @@ import {MatProgressBarModule} from '@angular/material/progress-bar';
 export class UserSearchComponent {
   query = signal('');
   users = resource<User[], { query: string }>({
-    request: () => ({ query: this.query() }),
-    loader: async ({request, abortSignal}) => {
-      const users = await fetch(`${API_URL}?name_like=^${request.query}`, {
+    params: () => ({ query: this.query() }),
+    loader: async ({params, abortSignal}) => {
+      const users = await fetch(`${API_URL}?name_like=^${params.query}`, {
         signal: abortSignal
       });
       if (!users.ok) throw Error(`Could not fetch...`)
